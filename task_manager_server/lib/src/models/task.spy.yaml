@@ -1,0 +1,14 @@
+class: Task
+table: tasks
+fields:
+  title: String
+  description: String?
+  isCompleted: bool, default=false
+  priority: int, default=0
+  dueDate: DateTime?
+  createdAt: DateTime, default=now
+  updatedAt: DateTime, default=now
+  projectId: int?
+indexes:
+  tasks_completed_idx:
+    fields: isCompleted

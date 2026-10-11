@@ -1,0 +1,15 @@
+project:
+  - getProjects:
+  - createProject:
+  - updateProject:
+  - deleteProject:
+task:
+  - createTask:
+  - getTasks:
+  - getTask:
+  - setCompleted:
+  - updateTask:
+  - deleteTask:
+  - assignTaskToProject:
+greeting:
+  - hello:

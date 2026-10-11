@@ -1,0 +1,30 @@
+services:
+  # Development services
+  postgres:
+    image: ghcr.io/serverpod/postgres:16
+    ports:
+      - "8090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: task_manager
+      POSTGRES_PASSWORD: "G80T2SYGv5U2NLhbExG03KxAk56fH2Mu"
+    volumes:
+      - task_manager_data:/var/lib/postgresql/data
+
+
+  # Test services
+  postgres_test:
+    image: ghcr.io/serverpod/postgres:16
+    ports:
+      - "9090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: task_manager_test
+      POSTGRES_PASSWORD: "t85FFJodstgeTJoMkw7KZm5EgSQ4PEg7"
+    volumes:
+      - task_manager_test_data:/var/lib/postgresql/data
+
+
+volumes:
+  task_manager_data:
+  task_manager_test_data:

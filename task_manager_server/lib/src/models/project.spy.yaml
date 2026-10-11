@@ -1,0 +1,7 @@
+class: Project
+table: projects
+fields:
+  name: String
+  description: String?
+  createdAt: DateTime
+  updatedAt: DateTime
