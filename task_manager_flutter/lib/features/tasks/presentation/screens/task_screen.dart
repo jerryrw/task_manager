@@ -13,6 +13,7 @@ import '../widgets/task_tile.dart';
 import '../../../projects/presentation/providers/project_providers.dart';
 import '../../../projects/presentation/providers/selected_project_provider.dart';
 import '../widgets/task_project_dialog.dart';
+import '../../../../core/theme/theme_provider.dart';
 
 class TaskScreen extends ConsumerStatefulWidget {
   const TaskScreen({super.key});
@@ -252,7 +253,7 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(filteredTasksProvider);
     final selectedView = ref.watch(selectedTaskViewProvider);
-
+    final themeMode = ref.watch(themeModeProvider);
     final selectedProjectId = ref.watch(selectedProjectProvider);
     final projectsAsync = ref.watch(projectsProvider);
 
@@ -279,13 +280,66 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
       appBar: AppBar(
         title: Text(title),
         actions: [
+          PopupMenuButton<ThemeMode>(
+            tooltip: 'Change appearance',
+            icon: Icon(
+              themeMode == ThemeMode.system
+                  ? Icons.brightness_auto_outlined
+                  : themeMode == ThemeMode.dark
+                  ? Icons.dark_mode
+                  : Icons.light_mode,
+            ),
+            onSelected: (mode) {
+              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: ThemeMode.system,
+                child: Row(
+                  children: [
+                    const Icon(Icons.brightness_auto_outlined),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('System')),
+                    if (themeMode == ThemeMode.system)
+                      const Icon(Icons.check, size: 18),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: ThemeMode.light,
+                child: Row(
+                  children: [
+                    const Icon(Icons.light_mode_outlined),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('Light')),
+                    if (themeMode == ThemeMode.light)
+                      const Icon(Icons.check, size: 18),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: ThemeMode.dark,
+                child: Row(
+                  children: [
+                    const Icon(Icons.dark_mode_outlined),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('Dark')),
+                    if (themeMode == ThemeMode.dark)
+                      const Icon(Icons.check, size: 18),
+                  ],
+                ),
+              ),
+            ],
+          ),
           IconButton(
             tooltip: 'Refresh tasks',
             icon: const Icon(Icons.refresh),
             onPressed: _refreshTasks,
           ),
+          const SizedBox(width: 8),
         ],
       ),
+
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isDesktop = constraints.maxWidth >= 850;

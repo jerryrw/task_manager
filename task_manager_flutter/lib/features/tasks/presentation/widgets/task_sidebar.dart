@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/task_view_provider.dart';
 import '../../../projects/presentation/providers/selected_project_provider.dart';
 import '../../../projects/presentation/widgets/project_sidebar_section.dart';
+import '../../../../core/theme/theme_provider.dart';
 
 class TaskSidebar extends ConsumerWidget {
   const TaskSidebar({super.key});
@@ -13,6 +14,7 @@ class TaskSidebar extends ConsumerWidget {
     final selectedView = ref.watch(selectedTaskViewProvider);
     final selectedProject = ref.watch(selectedProjectProvider);
     final colors = Theme.of(context).colorScheme;
+    final themeMode = ref.watch(themeModeProvider);
 
     return Material(
       color: colors.surfaceContainerLow,
@@ -92,11 +94,44 @@ class TaskSidebar extends ConsumerWidget {
             ),
 
             // Footer stays at the bottom
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'Task Manager • Desktop',
-                style: TextStyle(fontSize: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+              child: Column(
+                children: [
+                  DropdownButtonFormField<ThemeMode>(
+                    initialValue: themeMode,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Appearance',
+                      prefixIcon: Icon(Icons.palette_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: ThemeMode.system,
+                        child: Text('System'),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.light,
+                        child: Text('Light'),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.dark,
+                        child: Text('Dark'),
+                      ),
+                    ],
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Task Manager • Desktop',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
               ),
             ),
           ],
