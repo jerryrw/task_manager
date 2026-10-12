@@ -78,9 +78,11 @@ final filteredTasksProvider = Provider<AsyncValue<List<TaskEntity>>>((ref) {
 
       final matchesPriority = priority == null || task.priority == priority;
 
-      final matchesProject =
-          selectedProjectId == null || task.projectId == selectedProjectId;
-
+      final matchesProject = switch (selectedProjectId) {
+        null => true,
+        -1 => task.projectId == null,
+        _ => task.projectId == selectedProjectId,
+      };
       // When a project is selected, show all tasks
       // belonging to that project, regardless of
       // the currently selected global task view.

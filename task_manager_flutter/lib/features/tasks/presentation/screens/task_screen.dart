@@ -84,21 +84,59 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
 
   Future<void> _createTask() async {
     final title = _titleController.text.trim();
+
     if (title.isEmpty || _isCreating) return;
+
+    // Capture the selected project before creating the task.
+    final selectedProjectId = ref.read(
+      selectedProjectProvider,
+    );
 
     setState(() => _isCreating = true);
 
     try {
-      await ref.read(createTaskProvider)(title);
+      // Create the task and get its ID.
+      final newTask = await ref.read(
+        createTaskProvider,
+      )(title);
+
+      // Assign the new task to the selected project.
+      // null = global task view
+      // -1 = Unassigned
+      // positive ID = actual project
+      if (selectedProjectId != null && selectedProjectId > 0) {
+        final assigned =
+            await ref.read(
+              assignTaskToProjectProvider,
+            )(
+              taskId: newTask.id,
+              projectId: selectedProjectId,
+            );
+
+        if (assigned == null) {
+          throw StateError(
+            'Task created, but project assignment failed',
+          );
+        }
+      }
 
       if (!mounted) return;
 
+      // Clear the input after successful creation.
       _titleController.clear();
+
+      // Refresh the task list and project counts.
       _refreshTasks();
     } catch (error) {
-      _showError(error);
+      if (mounted) {
+        _showError(error);
+      }
     } finally {
       if (mounted) {
+        // Refresh even if project assignment failed:
+        // the task may already have been created.
+        _refreshTasks();
+
         setState(() => _isCreating = false);
       }
     }
@@ -181,6 +219,25 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
         throw StateError('Task not found');
       }
 
+      // Update the project only when it has changed.
+      if (result.projectId != task.projectId) {
+        final assigned =
+            await ref.read(
+              assignTaskToProjectProvider,
+            )(
+              taskId: task.id,
+              projectId: result.projectId,
+            );
+
+        if (assigned == null) {
+          throw StateError(
+            'Task was updated, but project assignment failed',
+          );
+        }
+      }
+
+      if (!mounted) return;
+
       _refreshTasks();
     } catch (error) {
       _showError(error);
@@ -207,7 +264,9 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
               )
               .firstOrNull;
 
-    final title = selectedProjectId != null
+    final title = selectedProjectId == -1
+        ? 'Unassigned'
+        : selectedProjectId != null
         ? selectedProject?.name ?? 'Project'
         : switch (selectedView) {
             TaskView.all => 'All Tasks',
@@ -313,9 +372,10 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
                     ),
                     data: (projects) {
                       final validProjectId =
-                          projects.any(
-                            (project) => project.id == selectedProjectId,
-                          )
+                          selectedProjectId == -1 ||
+                              projects.any(
+                                (project) => project.id == selectedProjectId,
+                              )
                           ? selectedProjectId
                           : null;
 
@@ -331,6 +391,10 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
                           const DropdownMenuItem<int>(
                             value: null,
                             child: Text('All task views'),
+                          ),
+                          const DropdownMenuItem<int>(
+                            value: -1,
+                            child: Text('Unassigned'),
                           ),
                           ...projects.map(
                             (project) => DropdownMenuItem<int>(

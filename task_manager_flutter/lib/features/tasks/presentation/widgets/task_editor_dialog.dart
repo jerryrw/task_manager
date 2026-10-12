@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/task_entity.dart';
+import '../../../projects/presentation/providers/project_providers.dart';
 
 class TaskEditResult {
   final String title;
   final String? description;
   final int priority;
   final DateTime? dueDate;
+  final int? projectId;
 
   const TaskEditResult({
     required this.title,
     this.description,
     required this.priority,
     this.dueDate,
+    this.projectId,
   });
 }
 
-class TaskEditorDialog extends StatefulWidget {
+class TaskEditorDialog extends ConsumerStatefulWidget {
   final TaskEntity task;
 
   const TaskEditorDialog({
@@ -25,15 +29,16 @@ class TaskEditorDialog extends StatefulWidget {
   });
 
   @override
-  State<TaskEditorDialog> createState() => _TaskEditorDialogState();
+  ConsumerState<TaskEditorDialog> createState() => _TaskEditorDialogState();
 }
 
-class _TaskEditorDialogState extends State<TaskEditorDialog> {
+class _TaskEditorDialogState extends ConsumerState<TaskEditorDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
 
   late int _priority;
   DateTime? _dueDate;
+  int? _projectId;
 
   @override
   void initState() {
@@ -49,6 +54,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
 
     _priority = widget.task.priority;
     _dueDate = widget.task.dueDate?.toLocal();
+    _projectId = widget.task.projectId;
   }
 
   @override
@@ -93,12 +99,15 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
         description: description.isEmpty ? null : description,
         priority: _priority,
         dueDate: _dueDate,
+        projectId: _projectId,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final projectsAsync = ref.watch(projectsProvider);
+
     return AlertDialog(
       title: const Text('Edit Task'),
       content: SizedBox(
@@ -117,6 +126,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 ),
               ),
               const SizedBox(height: 16),
+
               TextField(
                 controller: _descriptionController,
                 maxLines: 3,
@@ -126,6 +136,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 ),
               ),
               const SizedBox(height: 16),
+
               DropdownButtonFormField<int>(
                 initialValue: _priority,
                 decoration: const InputDecoration(
@@ -153,6 +164,60 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // Project assignment
+              projectsAsync.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (error, stack) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Unable to load projects'),
+                    TextButton(
+                      onPressed: () => ref.invalidate(projectsProvider),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+                data: (projects) {
+                  final validProjectId =
+                      projects.any(
+                        (project) => project.id == _projectId,
+                      )
+                      ? _projectId
+                      : null;
+
+                  return DropdownButtonFormField<int>(
+                    key: ValueKey(validProjectId),
+                    initialValue: validProjectId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Project',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int>(
+                        value: null,
+                        child: Text('Unassigned'),
+                      ),
+                      ...projects.map(
+                        (project) => DropdownMenuItem<int>(
+                          value: project.id,
+                          child: Text(
+                            project.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _projectId = value);
+                    },
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
               Row(
                 children: [
                   Expanded(
@@ -166,9 +231,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
                   ),
                   TextButton.icon(
                     onPressed: _selectDueDate,
-                    icon: const Icon(
-                      Icons.calendar_today,
-                    ),
+                    icon: const Icon(Icons.calendar_today),
                     label: const Text('Choose'),
                   ),
                   if (_dueDate != null)
@@ -191,7 +254,7 @@ class _TaskEditorDialogState extends State<TaskEditorDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _save,
+          onPressed: projectsAsync.hasValue ? _save : null,
           child: const Text('Save Changes'),
         ),
       ],

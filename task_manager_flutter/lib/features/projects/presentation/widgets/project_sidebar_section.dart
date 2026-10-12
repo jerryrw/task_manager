@@ -7,6 +7,7 @@ import '../providers/selected_project_provider.dart';
 import 'project_dialog.dart';
 import '../../../tasks/presentation/providers/task_providers.dart';
 import '../../../tasks/presentation/providers/task_view_provider.dart';
+import '../../../tasks/domain/entities/task_entity.dart';
 
 class ProjectSidebarSection extends ConsumerStatefulWidget {
   const ProjectSidebarSection({super.key});
@@ -137,6 +138,8 @@ class _ProjectSidebarSectionState extends ConsumerState<ProjectSidebarSection> {
   Widget build(BuildContext context) {
     final projectsAsync = ref.watch(projectsProvider);
     final selectedId = ref.watch(selectedProjectProvider);
+    final tasksAsync = ref.watch(tasksProvider);
+    final tasks = tasksAsync.value ?? <TaskEntity>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,6 +165,28 @@ class _ProjectSidebarSectionState extends ConsumerState<ProjectSidebarSection> {
             ],
           ),
         ),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: ListTile(
+            dense: true,
+            selected: selectedId == -1,
+            selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            leading: const Icon(Icons.folder_off_outlined),
+            title: const Text('Unassigned'),
+            trailing: Text(
+              '${tasks.where((task) => task.projectId == null && !task.isCompleted).length}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            onTap: () {
+              ref.read(selectedProjectProvider.notifier).selectUnassigned();
+            },
+          ),
+        ),
+
         projectsAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(16),
@@ -189,6 +214,13 @@ class _ProjectSidebarSectionState extends ConsumerState<ProjectSidebarSection> {
 
             return Column(
               children: projects.map((project) {
+                final activeCount = tasks
+                    .where(
+                      (task) =>
+                          task.projectId == project.id && !task.isCompleted,
+                    )
+                    .length;
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -213,24 +245,34 @@ class _ProjectSidebarSectionState extends ConsumerState<ProjectSidebarSection> {
                           .read(selectedProjectProvider.notifier)
                           .selectProject(project.id);
                     },
-                    trailing: PopupMenuButton<String>(
-                      enabled: !_busy,
-                      tooltip: 'Project options',
-                      onSelected: (action) {
-                        if (action == 'edit') {
-                          _editProject(project);
-                        } else if (action == 'delete') {
-                          _deleteProject(project);
-                        }
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Text('Edit'),
+
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$activeCount',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Delete'),
+                        PopupMenuButton<String>(
+                          enabled: !_busy,
+                          tooltip: 'Project options',
+                          onSelected: (action) {
+                            if (action == 'edit') {
+                              _editProject(project);
+                            } else if (action == 'delete') {
+                              _deleteProject(project);
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Text('Edit'),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
